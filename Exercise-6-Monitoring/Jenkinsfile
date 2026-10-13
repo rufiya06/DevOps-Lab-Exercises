@@ -5,24 +5,36 @@ pipeline {
     stages {
         stage('Check Monitoring Files') {
             steps {
-                echo 'Checking Exercise 6 files...'
-                sh 'test -f delivery_metrics.py'
-                sh 'test -f prometheus.yml'
-                sh 'test -f alert_rules.yml'
-                echo 'All monitoring configuration files are present.'
+                dir('Exercise-6-Monitoring') {
+                    echo 'Checking Exercise 6 files...'
+                    sh 'test -f delivery_metrics.py'
+                    sh 'test -f prometheus.yml'
+                    sh 'test -f alert_rules.yml'
+                    echo 'All monitoring files are present.'
+                }
             }
         }
 
         stage('Validate Python') {
             steps {
-                sh 'python --version || python3 --version'
-                sh 'python -m py_compile delivery_metrics.py || python3 -m py_compile delivery_metrics.py'
+                dir('Exercise-6-Monitoring') {
+                    sh '''
+                        if command -v python3 >/dev/null 2>&1; then
+                            python3 -m py_compile delivery_metrics.py
+                        elif command -v python >/dev/null 2>&1; then
+                            python -m py_compile delivery_metrics.py
+                        else
+                            echo "Python is not installed on the Jenkins agent."
+                            exit 1
+                        fi
+                    '''
+                    echo 'Python syntax validation passed.'
+                }
             }
         }
 
         stage('Check Monitoring Services') {
             steps {
-                echo 'Checking Prometheus and Grafana availability...'
                 sh 'curl -fsS http://host.docker.internal:9090/-/ready'
                 sh 'curl -fsS http://host.docker.internal:3000/api/health'
                 echo 'Prometheus and Grafana are responding.'
@@ -35,7 +47,7 @@ pipeline {
             echo 'Exercise 6 monitoring pipeline completed successfully.'
         }
         failure {
-            echo 'Pipeline failed. Check the console output for details.'
+            echo 'Pipeline failed. Check the console output.'
         }
     }
 }
