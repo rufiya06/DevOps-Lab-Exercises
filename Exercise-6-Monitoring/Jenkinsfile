@@ -1,0 +1,41 @@
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Check Monitoring Files') {
+            steps {
+                echo 'Checking Exercise 6 files...'
+                sh 'test -f delivery_metrics.py'
+                sh 'test -f prometheus.yml'
+                sh 'test -f alert_rules.yml'
+                echo 'All monitoring configuration files are present.'
+            }
+        }
+
+        stage('Validate Python') {
+            steps {
+                sh 'python --version || python3 --version'
+                sh 'python -m py_compile delivery_metrics.py || python3 -m py_compile delivery_metrics.py'
+            }
+        }
+
+        stage('Check Monitoring Services') {
+            steps {
+                echo 'Checking Prometheus and Grafana availability...'
+                sh 'curl -fsS http://host.docker.internal:9090/-/ready'
+                sh 'curl -fsS http://host.docker.internal:3000/api/health'
+                echo 'Prometheus and Grafana are responding.'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Exercise 6 monitoring pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check the console output for details.'
+        }
+    }
+}
